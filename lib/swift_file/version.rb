@@ -1,0 +1,3 @@
+module SwiftFile
+  VERSION = "0.0.1"
+end

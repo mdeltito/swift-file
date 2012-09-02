@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+require "optparse"
+require "swift_file"
+require "pp"
+
+options = {}
+
+optparse = OptionParser.new do|opts|
+  opts.banner = "Usage: swift_file [options] file"
+
+  options[:group] = nil
+  opts.on( '-g', '--group GROUP', 'Add this file to a group' ) do |group|
+    options[:group] = group
+  end
+
+  options[:password] = nil
+  opts.on( '-p', '--password PASS', 'Secure the file with a password' ) do |pass|
+    options[:password] = pass
+  end
+end
+
+optparse.parse!
+
+begin
+
+  f = File.new(ARGV[0])
+
+  sf = SwiftFile::SwiftUpload.new({
+    :file => f,
+    :group => options[:group],
+    :password => options[:password]
+  })
+
+  sf.upload
+  puts sf.url
+rescue Exception => e
+  puts "ERROR: #{e}"
+end
