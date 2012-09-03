@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 require "optparse"
+require "highline/import"
 require "swift_file"
-require "pp"
 
 options = {}
 
 optparse = OptionParser.new do|opts|
-  opts.banner = "Usage: swift_file [options] file"
+  opts.banner = "Usage: swift_file [options] file1 file2 ..."
 
   options[:group] = nil
   opts.on( '-g', '--group GROUP', 'Add this file to a group' ) do |group|
@@ -14,25 +14,40 @@ optparse = OptionParser.new do|opts|
   end
 
   options[:password] = nil
-  opts.on( '-p', '--password PASS', 'Secure the file with a password' ) do |pass|
+  opts.on( '-p[PASS]', 'Supply a password to encrypt the file. This password is
+    transferred securely and is never stored. It will be required to retrieve
+    the file, and you will need to (securely) communicate thie password with the recipient.' ) do |pass|
     options[:password] = pass
   end
 end
 
-optparse.parse!
+# User has (correctly) supplied the -p flag without the password
+password_supplied = ARGV.include?('-p')
 
 begin
+  optparse.parse!
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument
+  puts 'ERROR: ' + $!.to_s
+end
 
-  f = File.new(ARGV[0])
+if options[:password] == nil && password_supplied
+  # FIXME: highline is not behaving on my installation, and
+  #   disabling echo causes an infinte loop of errors
+  options[:password] = ask("Enter a password: ") # { |q| q.echo = false }
+end
 
-  sf = SwiftFile::SwiftUpload.new({
-    :file => f,
-    :group => options[:group],
-    :password => options[:password]
-  })
+begin
+  ARGV.each do |filepath|
+    f = File.new(filepath)
+    sf = SwiftFile::SwiftUpload.new({
+      :file => f,
+      :group => options[:group],
+      :password => options[:password]
+    })
 
-  sf.upload
-  puts sf.url
-rescue Exception => e
+    sf.transfer
+    puts sf.url
+  end
+rescue => e
   puts "ERROR: #{e}"
 end

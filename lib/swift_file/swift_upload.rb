@@ -9,48 +9,58 @@ module SwiftFile
     attr_accessor :file, :group, :url
 
     def initialize(params)
+      # ensure we've been passed a valid file
       if File.readable?(params[:file]) && File.file?(params[:file])
         @file = params[:file]
       else
-        raise ArgumentError.new('Invalid file supplied for upload')
+        raise "Invalid file supplied for new SwiftUpload"
       end
 
       @group = params[:group] || ''
       @password = params[:password] || ''
     end
 
+    def transfer
+      # start a session by requesting the url via GET
+      begin
+        client.perform
+      rescue Curl::Err => e
+        raise "Connection failed: #{e}"
+      end
 
-    def upload
-      # start a session by requestion the url via GET
-      client.perform
+      # post the file and capture the resulting url
+      begin
+        client.multipart_form_post = true
+        client.http_post(
+          Curl::PostField.file('file1', "#{@file.path}"),
+          Curl::PostField.content('file_group[name]', @group),
+          Curl::PostField.content('file_group[password]', @password),
+          Curl::PostField.content('file_group_expiration', '1m')
+        )
 
-      # now post
-      client.multipart_form_post = true
-      client.http_post(
-        Curl::PostField.file('file1', "#{@file.path}"),
-        Curl::PostField.content('file_group[name]', @group),
-        Curl::PostField.content('file_group[password]', @password),
-        Curl::PostField.content('file_group_expiration', '1m')
-      )
+        @url = client.last_effective_url
+      rescue Curl::Err => e
+        raise "Upload failed: #{e}"
+      ensure
+        client.close
+      end
 
-      @url = client.last_effective_url
       @url
     end
 
-    ##
-    private
 
+    private
     def client
       if !@client
         url = "#{@@swiftfile_host}/#{@@swiftfile_endpoint}"
         @client = Curl::Easy.new(url) do |curl|
-            # curl.verbose= true
-            curl.follow_location = true
-            curl.enable_cookies = true
-            curl.cookiejar = @@swiftfile_cookie
+          # curl.verbose= true
+          curl.follow_location = true
+          curl.enable_cookies = true
+          curl.cookiejar = @@swiftfile_cookie
+          curl.cookiefile = @@swiftfile_cookie
         end
       end
-
       @client
     end
   end

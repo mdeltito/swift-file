@@ -5,7 +5,7 @@ describe SwiftUpload do
     f = File.new(File.dirname(__FILE__) + '/test_file.txt', 'rb')
     sf = SwiftFile::SwiftUpload.new({:file => f})
 
-    sf.upload
+    sf.transfer
     sf.url.should =~ /^https/
   end
 end
