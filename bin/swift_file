@@ -21,8 +21,8 @@ optparse = OptionParser.new do|opts|
   end
 end
 
-# User has (correctly) supplied the -p flag without the password
-password_supplied = ARGV.include?('-p')
+# Check if user has (correctly) supplied the -p flag without the password
+password_opt_supplied = ARGV.include?('-p')
 
 begin
   optparse.parse!
@@ -30,7 +30,7 @@ rescue OptionParser::InvalidOption, OptionParser::MissingArgument
   puts 'ERROR: ' + $!.to_s
 end
 
-if options[:password] == nil && password_supplied
+if options[:password] == nil && password_opt_supplied
   # FIXME: highline is not behaving on my installation, and
   #   disabling echo causes an infinte loop of errors
   options[:password] = ask("Enter a password: ") # { |q| q.echo = false }

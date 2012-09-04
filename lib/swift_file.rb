@@ -2,7 +2,6 @@ require "swift_file/version"
 require "swift_file/swift_upload"
 
 module SwiftFile
-
   class << self
     attr_accessor :swift_file, :swift_file_group, :swift_file_password
 
