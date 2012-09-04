@@ -2,25 +2,35 @@ require 'curb'
 
 module SwiftFile
   class SwiftUpload
-    @@swiftfile_host      = "https://www.swiftfile.net"
-    @@swiftfile_endpoint  = ""
-    @@swiftfile_cookie    = "/tmp/swift_file.cookie"
+    SWIFTFILE_HOST              = 'https://www.swiftfile.net'
+    SWIFTFILE_ENDPOINT          = ''
+    SWIFTFILE_COOKIE            = '/tmp/swift_file.cookie'
+    SWIFTFILE_EXPIRY_OPTIONS    =  %w(1m 1w 1d 1h)
+    SWIFTFILE_EXPIRY_DEFAULT    = '1d'
 
-    attr_accessor :file, :group, :url
+    attr_accessor :files, :group, :expiry, :url
 
     def initialize(params)
-      # ensure we've been passed a valid file
-      if File.readable?(params[:file]) && File.file?(params[:file])
-        @file = params[:file]
-      else
-        raise "Invalid file supplied for new SwiftUpload"
-      end
-
-      @group = params[:group] || ''
+      @files    = params[:files] || []
+      @group    = params[:group] || ''
       @password = params[:password] || ''
+
+      if params[:expiry] && SWIFTFILE_EXPIRY_OPTIONS.include?(params[:expiry])
+        @expiry = params[:expiry]
+      else
+        @expiry = SWIFTFILE_EXPIRY_DEFAULT
+      end
+    end
+
+    def add_file(file)
+      @files << file unless @files.include?(file)
     end
 
     def transfer
+      if @files.empty?
+        raise 'No files supplied for uploed'
+      end
+
       # start a session by requesting the url via GET
       begin
         client.perform
@@ -31,12 +41,7 @@ module SwiftFile
       # post the file and capture the resulting url
       begin
         client.multipart_form_post = true
-        client.http_post(
-          Curl::PostField.file('file1', "#{@file.path}"),
-          Curl::PostField.content('file_group[name]', @group),
-          Curl::PostField.content('file_group[password]', @password),
-          Curl::PostField.content('file_group_expiration', '1m')
-        )
+        client.http_post(form)
 
         @url = client.last_effective_url
       rescue Curl::Err => e
@@ -52,16 +57,28 @@ module SwiftFile
     private
     def client
       if !@client
-        url = "#{@@swiftfile_host}/#{@@swiftfile_endpoint}"
+        url = "#{SWIFTFILE_HOST}/#{SWIFTFILE_ENDPOINT}"
         @client = Curl::Easy.new(url) do |curl|
           # curl.verbose= true
           curl.follow_location = true
           curl.enable_cookies = true
-          curl.cookiejar = @@swiftfile_cookie
-          curl.cookiefile = @@swiftfile_cookie
+          curl.cookiejar = SWIFTFILE_COOKIE
+          curl.cookiefile = SWIFTFILE_COOKIE
         end
       end
       @client
+    end
+
+    def form
+      fields = []
+      @files.each_with_index do |file, idx|
+        fields << Curl::PostField.file("file#{idx+1}", "#{file.path}")
+      end
+
+      fields << Curl::PostField.content('file_group[name]', @group)
+      fields << Curl::PostField.content('file_group[password]', @password)
+      fields << Curl::PostField.content('file_group_expiration', @expiry)
+      fields
     end
   end
 end

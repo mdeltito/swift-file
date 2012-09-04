@@ -13,11 +13,14 @@ optparse = OptionParser.new do|opts|
     options[:group] = group
   end
 
+  options[:expiry] = nil
+  opts.on( '-e', '--expires EXPIRY', "Set the length of time until this file expires [#{SwiftFile::SwiftUpload::SWIFTFILE_EXPIRY_OPTIONS.join(' ')}]" ) do |expiry|
+    options[:expiry] = expiry
+  end
+
   options[:password] = nil
-  opts.on( '-p[PASS]', 'Supply a password to encrypt the file. This password is
-    transferred securely and is never stored. It will be required to retrieve
-    the file, and you will need to (securely) communicate thie password with the recipient.' ) do |pass|
-    options[:password] = pass
+  opts.on( '-p[PASSWORD]', 'Supply a password to encrypt the file.' ) do |password|
+    options[:password] = password
   end
 end
 
@@ -26,8 +29,8 @@ password_opt_supplied = ARGV.include?('-p')
 
 begin
   optparse.parse!
-rescue OptionParser::InvalidOption, OptionParser::MissingArgument
-  puts 'ERROR: ' + $!.to_s
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument => e
+  puts "ERROR: #{e}"
 end
 
 if options[:password] == nil && password_opt_supplied
@@ -37,17 +40,18 @@ if options[:password] == nil && password_opt_supplied
 end
 
 begin
-  ARGV.each do |filepath|
-    f = File.new(filepath)
-    sf = SwiftFile::SwiftUpload.new({
-      :file => f,
-      :group => options[:group],
-      :password => options[:password]
-    })
-
-    sf.transfer
-    puts sf.url
+  if ARGV.empty?
+    raise "no files supplied"
   end
+
+  sf = SwiftFile::SwiftUpload.new(options)
+
+  ARGV.each do |filepath|
+    sf.add_file File.new(filepath)
+  end
+
+  sf.transfer
+  puts sf.url
 rescue => e
   puts "ERROR: #{e}"
 end
