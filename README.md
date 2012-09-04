@@ -1,10 +1,14 @@
 # SwiftFile
 
-TODO: Write a gem description
+This gem provides an interface for uploading files to the [SwiftFile](https://www.swiftfile.net) service. There is support for uploading via the command line via the supplied executable `swift_file` as well as a basic API for adding support to your own classes.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Most likely you will want to simply install the gem:
+
+    $ gem install swift_file
+
+Or to use this in your projects, add this line to your application's Gemfile:
 
     gem 'swift_file'
 
@@ -12,13 +16,13 @@ And then execute:
 
     $ bundle
 
-Or install it yourself as:
+## Command-line Usage
+`swift_file -h`
 
-    $ gem install swift_file
-
-## Usage
-
-TODO: Write usage instructions here
+    Usage: swift_file [options] file1 file2 ...
+        -g, --group GROUP                Add this file to a group
+        -e, --expires EXPIRY             Set the length of time until this file expires [1m 1w 1d 1h]
+        -p[PASSWORD]                     Supply a password to encrypt the file.
 
 ## Contributing
 
